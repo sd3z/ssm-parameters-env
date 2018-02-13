@@ -10,17 +10,17 @@ import platform
 try:
     from urllib.request import urlopen
 except ImportError:
-    from urlparse import urlparse
+    from urllib import urlopen
 
 
 class SSMParameterEnv(object):
     """ Retrives SSM parameters from a prefix and converts them to environmental variables """
 
     parameters = {}
-    def __init__(self, prefix, destination=False):
+    def __init__(self, prefix, destination=False, region="us-east-1"):
         self.ssm_prefix = prefix + "env/"
 
-        client = boto3.client('ssm')
+        client = boto3.client('ssm', region_name=region)
 
         get_params_by_path_args = {
             "Path" : self.ssm_prefix,
@@ -53,7 +53,7 @@ class SSMParameterEnv(object):
     def set_windows_variables(self, variables):
         """ runs setx for each variable """
         for name, value in variables.iteritems():
-            os.system('setx {} "{}"').format(name, value.replace("\"","\\\""))
+            os.system('setx /s {} "{}"'.format(name, value.replace("\"","\\\"")))
 
     def write_variables(self, variables, path):
         """ writes a file containing the enviromental variables to path """
@@ -67,10 +67,10 @@ class SSMParameterFiles(object):
 
     files = {}
 
-    def __init__(self, prefix, write_files=False):
+    def __init__(self, prefix, write_files=False, region="us-east-1"):
         self.ssm_prefix = prefix + "files/"
 
-        client = boto3.client('ssm')
+        client = boto3.client('ssm', region_name=region)
 
         get_params_by_path_args = {
             "Path" : self.ssm_prefix,
@@ -105,10 +105,10 @@ class SSMParameterCmds(object):
 
     cmds = {}
 
-    def __init__(self, prefix, run=False):
+    def __init__(self, prefix, run=False, region="us-east-1"):
         self.ssm_prefix = prefix + "cmds/"
 
-        client = boto3.client('ssm')
+        client = boto3.client('ssm', region_name=region)
 
 
         get_params_by_path_args = {
@@ -149,10 +149,10 @@ class SSMParameterPs1(object):
 
     cmds = {}
 
-    def __init__(self, prefix, run=False):
+    def __init__(self, prefix, run=False, region="us-east-1"):
         self.ssm_prefix = prefix + "ps1/"
 
-        client = boto3.client('ssm')
+        client = boto3.client('ssm', region_name=region)
 
 
         get_params_by_path_args = {
@@ -181,18 +181,19 @@ class SSMParameterPs1(object):
         """ Runs each script by copying it to a temp file and executing bash with popen and the temp file"""
         for index in sorted(cmds.keys()):
             cmd = cmds[index]
-            (temp_fd, temp_path) = tempfile.mkstemp()
-            os.write(temp_fd, cmd)
+            (temp_fd, temp_path) = tempfile.mkstemp(suffix=".ps1")
+            os.write(temp_fd, cmd.encode('utf-8'))
             os.close(temp_fd)
-            process = subprocess.Popen("C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe " + temp_path, shell=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen("C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe -executionpolicy bypass  -file " + temp_path, shell=True, stdout=subprocess.PIPE)
             process.wait()
 
 if __name__ == '__main__':
     #load config from userdata
     CONFIG = json.loads(urlopen("http://169.254.169.254/latest/user-data").read().decode())
+    REGION = urlopen("http://169.254.169.254/latest/meta-data/placement/availability-zone").read().decode()[:-1]
     SSM_PREFIX = CONFIG['ssm']['prefix']
     SSM_DESINATION = CONFIG['ssm']['destination']
-    SSMParameterEnv(SSM_PREFIX, SSM_DESINATION)
-    SSMParameterFiles(SSM_PREFIX, write_files=True)
-    SSMParameterCmds(SSM_PREFIX, run=True)
-    SSMParameterPs1(SSM_PREFIX, run=True)
+    SSMParameterEnv(SSM_PREFIX, SSM_DESINATION, region=REGION)
+    SSMParameterFiles(SSM_PREFIX, write_files=True, region=REGION)
+    SSMParameterCmds(SSM_PREFIX, run=True, region=REGION)
+    SSMParameterPs1(SSM_PREFIX, run=True, region=REGION)
