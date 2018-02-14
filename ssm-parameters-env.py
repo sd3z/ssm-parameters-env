@@ -53,7 +53,7 @@ class SSMParameterEnv(object):
     def set_windows_variables(self, variables):
         """ runs setx for each variable """
         for name, value in variables.iteritems():
-            os.system('setx /s {} "{}"'.format(name, value.replace("\"","\\\"")))
+            os.system('setx /M {} "{}"'.format(name, value.replace("\"","\\\"")))
 
     def write_variables(self, variables, path):
         """ writes a file containing the enviromental variables to path """
