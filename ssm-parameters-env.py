@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import boto3
 import platform
+import six
 
 #Python2 and Python3 support
 try:
@@ -52,13 +53,13 @@ class SSMParameterEnv(object):
 
     def set_windows_variables(self, variables):
         """ runs setx for each variable """
-        for name, value in variables.iteritems():
+        for name, value in six.iteritems(variables):
             os.system('setx /M {} "{}"'.format(name, value.replace("\"","\\\"")))
 
     def write_variables(self, variables, path):
         """ writes a file containing the enviromental variables to path """
         with open(path, "w") as envfile:
-            for name, value in variables.iteritems():
+            for name, value in six.iteritems(variables):
                 text = "{}=\"{}\"\n".format(name, value.replace("\"","\\\""))
                 envfile.write(text)
 
