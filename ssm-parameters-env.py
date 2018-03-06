@@ -196,5 +196,7 @@ if __name__ == '__main__':
     SSM_DESINATION = CONFIG['ssm']['destination']
     SSMParameterEnv(SSM_PREFIX, SSM_DESINATION, region=REGION)
     SSMParameterFiles(SSM_PREFIX, write_files=True, region=REGION)
-    SSMParameterCmds(SSM_PREFIX, run=True, region=REGION)
-    SSMParameterPs1(SSM_PREFIX, run=True, region=REGION)
+    if platform.system() != 'Windows':
+        SSMParameterCmds(SSM_PREFIX, run=True, region=REGION)
+    else:
+        SSMParameterPs1(SSM_PREFIX, run=True, region=REGION)
