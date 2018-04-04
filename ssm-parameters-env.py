@@ -6,6 +6,8 @@ import tempfile
 import boto3
 import platform
 import six
+import errno
+
 
 #Python2 and Python3 support
 try:
@@ -99,6 +101,12 @@ class SSMParameterFiles(object):
 
     def write_file(self, path, contents):
         """ writes a file containing the contents to path """
+        if not os.path.exists(os.path.dirname(path)):
+            try:
+                os.makedirs(os.path.dirname(path))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
         with open(path, "w") as envfile:
             envfile.write(contents)
 class SSMParameterCmds(object):
